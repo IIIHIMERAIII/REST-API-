@@ -1,6 +1,8 @@
 const { Schema, model } = require('mongoose');
 const Joi = require('joi');
 
+const { mongooseHandleError } = require('../helpers');
+
 const contactShema = new Schema({
     name: {
         type: String,
@@ -16,12 +18,14 @@ const contactShema = new Schema({
         type: Boolean,
         default: false,
     },
-});
+    owner: {
+        type: Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
+    }
+}, { versionKey: false, timestamps: true });
 
-contactShema.post("save", (error, data, next) => {
-    error.status = 400; 
-    next();
-});
+contactShema.post("save", mongooseHandleError);
 
 
 const addSchema = Joi.object({
