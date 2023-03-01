@@ -1,12 +1,19 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
+const gravatar = require('gravatar');
+const path = require('path');
+const fs = require('fs/promises');
+
+
 const { User } = require('../models/user')
 
 const { HttpError, ctrlWrapper } = require('../helpers/');
 
 const { SECRET_KEY } = process.env;
 
-const signup = async (req, res) => {
+const avatarDir = path.join(__dirname, '../', 'public', 'avatars');
+
+const signup = async(req, res) => {
     const { email, password} = req.body;
     const user = await User.findOne({ email });
     if (user) {
@@ -14,14 +21,16 @@ const signup = async (req, res) => {
     }
     
     const hashPassword = await bcrypt.hash(password, 10);
-    const results = await User.create({ ...req.body, password: hashPassword });
+    const avatarURL = gravatar.url(email);
+    
+    const results = await User.create({ ...req.body, password: hashPassword, avatarURL });
 
     res.json(
         `Successful create user by Email: ${results.email}`
     )
 };
 
-const signin = async (req, res) => {
+const signin = async(req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
@@ -45,7 +54,7 @@ const signin = async (req, res) => {
     })
 };
 
-const getCurrent = async (req, res) => {
+const getCurrent = async(req, res) => {
     const { email } = req.user;
 
     res.json({
@@ -53,13 +62,31 @@ const getCurrent = async (req, res) => {
     })
 };
 
-const logout = async (req, res) => {
-    await User.findByIdAndUpdate(req.user._id, { toke: "" });
+const logout = async(req, res) => {
+    await User.findByIdAndUpdate(req.user._id, { token: "" });
 
     res.json({
         message: 'Logout success'
     })
 };
+
+const updateAvatar = async (req, res) => {
+    if (!req.file) {
+        throw HttpError(400, "Avatar must be exist");
+    }
+    const { path: tempUpload, originalname } = req.file;
+    const { _id } = req.user;
+    const extension = originalname.split(".").pop();
+    const filename = `${_id}_avatar.${extension}`;
+    const resultsUpload = path.join(avatarDir, filename);
+    await fs.rename(tempUpload, resultsUpload);
+    const avatarURL = path.join('avatars', filename);
+    await User.findByIdAndUpdate(_id , { avatarURL});
+
+    res.json({
+        avatarURL,
+    })
+}; 
 
 
 module.exports = {
@@ -67,5 +94,6 @@ module.exports = {
     signin: ctrlWrapper(signin),
     getCurrent: ctrlWrapper(getCurrent),
     logout: ctrlWrapper(logout),
+    updateAvatar: ctrlWrapper(updateAvatar),
 }
  
