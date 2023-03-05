@@ -6,9 +6,11 @@ const { schemas } = require('../../models/user');
 
 const router = express.Router();
 
-
-
 router.post('/signup', validateBody(schemas.signupSchema), ctrl.signup);
+
+router.get('/verify/:verificationCode', ctrl.verify)
+
+router.post('/resend-verify-email', validateBody(schemas.emailSchema), ctrl.resendVerifyEmail)
 
 router.post('/signin', validateBody(schemas.signinSchema), ctrl.signin);
 
